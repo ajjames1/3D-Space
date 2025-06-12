@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas 4</title>
+</head>
+<body>
+    <script>
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+
+        var canvas = document.createElement('canvas');
+
+        document.body.style.backgroundColor = "black";
+        canvas.style.backgroundColor = "black";
+        document.body.appendChild(canvas);
+
+        canvas.width = w;
+        canvas.height = h;
+
+        var ctx = canvas.getContext('2d');
+
+        var point = function(x,y,z,rgb) {this.x=x;this.y=y;this.z=z;this.rgb=rgb;}
+
+        var center = new point(w/2, h/2, 100);
+        
+        var radius = 100;
+
+        var angles = [];
+        var points = [];
+        var views = [];
+
+        var mouse = new point(0,0,0);
+
+        var view_point = new point(0,h/2,100);
+
+        document.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        })
+        for(let i =0; i<360; i++) {
+            let angle = Math.PI / 180 * i;
+            let cos = view_point.x + Math.cos(angle) * radius;
+            let sin = view_point.z + Math.sin(angle) * radius;
+
+            views.push(new point(cos,view_point.y,sin,"white"));
+    }
+
+        for(let j=0; j<5; j+=1) {
+            for(let i =0; i<360; i++) {
+                let angle = Math.PI / 20 * i;
+                let cos = center.x + Math.cos(angle) * radius * j;
+                let sin = center.z + Math.sin(angle) * radius * j;
+
+                angles.push(new point(cos,center.y,sin,`rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`));
+            }
+    }
+
+            for(let j=0; j<angles.length/20; j++) {
+                for(let i =0; i<=360; i+=1) {
+                    let angle = Math.PI / 180 * i;
+                    let cos = Math.cos(angle) * radius + angles[j].x;
+                    let sin = Math.sin(angle) * radius + angles[j].y;
+                    points.push(new point(cos,center.y,sin,angles[j].rgb));
+            }
+    }
+
+        let snow = [];
+        for(let i =0; i<6.25; i+=0.17) {
+            let cos = center.x + Math.cos(i) * 3;
+            let sin = center.y + Math.sin(i) * 3;
+
+           // snow.push(new point(cos,center.y,sin,"white"));
+        }
+
+        let snow_rad = 100;
+
+        for(let dir=1; dir>=-1; dir-=2) {
+        for(let i =0; i<3.225; i+=0.11) {
+            let r = Math.cos(i) * snow_rad;
+            let fixedY = Math.sin(i) * snow_rad * dir;
+
+            for(let j =0; j<6.25; j+=0.17) {
+                let cos = center.x + Math.cos(j) * r;
+                let sin = center.z + Math.sin(j) * r;
+
+                snow.push(new point(cos,fixedY,sin,`rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`));
+            }
+        }
+    }
+
+        function rotateShape(point, angle,axis) {
+
+            switch(axis) {
+                case "x":
+                    for(let i =0; i < point.length; i++) {
+                    let p = point[i];
+
+                    let y = center.y;
+                    let z = center.z;
+
+                    let dy = Math.cos(angle) * (p.y - y) - Math.sin(angle) * (p.z - z);
+                    let dz = Math.sin(angle) * (p.y - y) + Math.cos(angle) * (p.z - z);
+                    
+                    p.y = dy + y;
+                    p.z = dz + z;
+                }
+                break;
+            case "y":
+                for(let i =0; i < point.length; i++) {
+                    let p = point[i];
+                    
+                    let x = center.x;
+                    let z = center.z;
+
+                    let dx = Math.sin(angle) * (p.z - z) + Math.cos(angle) * (p.x - x);
+                    let dz = Math.cos(angle) * (p.z - z) - Math.sin(angle) * (p.x - x);
+                    
+                    
+                    p.x = dx + x;
+                    p.z = dz + z;
+                }
+                break;
+            case "z":
+                for(let i =0; i<point.length; i++) {
+                    let p = point[i];
+                    let x = center.x;
+                    let y = center.y;
+
+                    let dx = Math.cos(angle) * (p.x - x) - Math.sin(angle) * (p.y - y);
+                    let dy = Math.sin(angle) * (p.x - x) + Math.cos(angle) * (p.y - y);
+                    
+                    p.x = dx + x;
+                    p.y = dy + y;
+                }
+            break;
+            }
+        }
+
+        var camera = new point(0,0,0);
+
+        function project(x,y,z,points,fov,dist,angle,start) {
+            let arr = [];
+            for(let i =0; i<points.length; i++) {
+                let p = points[i];
+                angle /= 1.2;
+                
+                if(start) {
+                    let dx1 = Math.sin(angle) * (camera.z - p.z) + Math.cos(angle) * (camera.x - p.x);
+                    let dz1 = Math.cos(angle) * (camera.z - p.z) - Math.sin(angle) * (camera.x - p.x);
+                    
+                    camera.x = dx1 + p.x;
+                    camera.z = dz1 + p.z;
+                }
+                let dx = (camera.x - (p.x + x)) * (fov / ((camera.z - (p.z + z)) - dist)) + center.x;
+                let dy = (camera.y - (p.y + y)) * (fov / ((camera.z - (p.z + z)) - dist)) + center.y;
+
+                arr.push(new point(dx, dy, 0 , p.rgb));
+            }
+            return arr;
+        }
+
+        function drawShape(i,proj) {
+
+            ctx.lineWidth = 1;
+            ctx.fillStyle = `rgb(${i},0,0)`;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = proj[i].rgb;
+            ctx.moveTo(proj[i].x, proj[i].y);
+            ctx.lineTo(proj[i].x + 1, proj[i].y + 1);
+            
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
+
+        }
+        
+         var snowBox = [];
+            
+        
+        function render(now) {
+            now *= 0.001;
+            
+            ctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+            
+            
+            var proj = project(0,0,0,points, 400, 1000,Math.PI / 180);
+            var view = project(0,0,0,views, 400, 1000, Math.PI / 180);
+            var snow_ = project(0,0,0,snow,400,1000,Math.PI / 180);
+
+            if(snowBox.length <= 200) {
+                snowBox.push(project(Math.random() * (w - -w) + -w,Math.random() * (h - -h) + -h,Math.random() * (1000 - 100) + 100,snow, 300, 100, Math.PI / 180,false));
+            }
+
+            console.log(snowBox)
+
+            // ctx.lineWidth = 1;
+            
+            // // console.log(snow_);
+            //  ctx.beginPath();
+            // for(let i =0; i<snow_.length; i++) {
+            // var s = project(0,0,0,snow_[i], 400, 1000);
+            // console.log(s);
+            // ctx.strokeStyle = "white";
+            // ctx.moveTo(s.x, s.y);
+            // ctx.lineTo(s.x + 1, s.y + 1);
+
+            // }
+            
+            // ctx.closePath();
+            // ctx.stroke();
+
+           // camera.x = px + (Math.cos(Math.PI / 180) * (camera.x - px) - Math.sin(Math.PI / 180) * (camera.y - py));
+           // camera.y = py + (Math.sin(Math.PI / 180) * (camera.x - px) + Math.cos(Math.PI / 180) * (camera.y - py));
+            
+            //camera.x += px;
+            
+            for(let i =0; i<snow_.length; i++) {
+                drawShape(i, snow_);
+               // points[i].y -= now;
+            }
+            
+            
+            for(let i =0; i<snowBox.length; i++) {
+                drawShape(i, snowBox[i]);
+                rotateShape(snowBox[i], Math.PI / 180, "z");
+                rotateShape(snowBox[i], Math.PI / 180, "y");
+                rotateShape(snowBox[i], Math.PI / 180, "x");
+                //  views[i].y = h/2;
+            }
+
+        //    rotateShape(points, Math.PI / 180, "y");
+
+            requestAnimationFrame(render);
+        } 
+
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulated 3D Cube with Canvas</title>
+    <style>
+        body { margin: 0; background: black; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { border: 1px solid white; }
+    </style>
+</head>
+<body>
+    <canvas id="cubeCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("cubeCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 500;
+        canvas.height = 500;
+
+        let angleX = 0, angleY = 0;
+        
+        const points = [
+            [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+            [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+        ];
+        
+        function rotatePoint([x, y, z], angleX, angleY) {
+            let cosX = Math.cos(angleX), sinX = Math.sin(angleX);
+            let cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+            
+            let newX = x * cosY - z * sinY;
+            let newZ = x * sinY + z * cosY;
+            let newY = y * cosX - newZ * sinX;
+            newZ = y * sinX + newZ * cosX;
+            
+            return [newX, newY, newZ];
+        }
+        
+        function drawCube() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const projected = points.map(p => rotatePoint(p, angleX, angleY).map(coord => coord * 100 + 250));
+            
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 2;
+            const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+            edges.forEach(([start, end]) => {
+                ctx.beginPath();
+                ctx.moveTo(...projected[start]);
+                ctx.lineTo(...projected[end]);
+                ctx.stroke();
+            });
+
+            angleX += 0.02;
+            angleY += 0.01;
+
+            requestAnimationFrame(drawCube);
+        }
+
+        drawCube();
+    </script>
+</body>
+</html>
